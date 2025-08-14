@@ -111,14 +111,14 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
   const findToken = (mint: string): KnownToken | undefined => 
     availableTokens.find(t => t.mint === mint);
 
-  // Fetch token prices for current tokens with better caching
+  // Enhanced price fetching with Jupiter API
   const fetchPrices = async () => {
     if (network !== 'mainnet') return; // Only fetch prices on mainnet
     
     const mints = [swapInputMint, swapOutputMint].filter(mint => mint && mint !== '');
     if (mints.length === 0) return;
     
-    // Check if we already have recent prices (less than 15 seconds old for more real-time data)
+    // Check if we already have recent prices (less than 15 seconds old for real-time data)
     const now = Date.now();
     const priceAge = 15 * 1000; // 15 seconds for more real-time updates
     
@@ -131,16 +131,13 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
     
     setIsLoadingPrices(true);
     try {
-      console.log('🔄 Fetching fresh token prices for:', mints);
+      console.log('🔄 Fetching fresh token prices from Jupiter for:', mints);
       const prices = await fetchTokenPrices(mints);
       console.log('✅ Received prices:', prices.length, 'tokens');
       
       const priceMap: { [mint: string]: TokenPrice } = {};
       prices.forEach(price => {
-        priceMap[price.mint] = {
-          ...price,
-          lastUpdated: now
-        };
+        priceMap[price.mint] = price;
       });
       
       setTokenPrices(prev => ({ ...prev, ...priceMap }));
@@ -176,39 +173,36 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
     }
   };
 
-  // Preload prices for common tokens
+  // Preload prices for common tokens using Jupiter
   const preloadCommonTokenPrices = async () => {
     if (network !== 'mainnet') return;
     
-    const commonMints = [
-      'So11111111111111111111111111111111111111112', // SOL
-      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
-      'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
-      '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', // RAY
-      'SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt'  // SRM
-    ];
-    
     try {
-      console.log('🔄 Preloading common token prices...');
+      console.log('🔄 Preloading common token prices from Jupiter...');
+      const commonMints = [
+        'So11111111111111111111111111111111111111112', // SOL
+        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+        'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+        '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', // RAY
+        'SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt'  // SRM
+      ];
+      
       const prices = await fetchTokenPrices(commonMints);
       const priceMap: { [mint: string]: TokenPrice } = {};
       const now = Date.now();
       
       prices.forEach(price => {
-        priceMap[price.mint] = {
-          ...price,
-          lastUpdated: now
-        };
+        priceMap[price.mint] = price;
       });
       
       setTokenPrices(prev => ({ ...prev, ...priceMap }));
-      console.log('✅ Preloaded prices for', prices.length, 'common tokens');
+      console.log('✅ Preloaded prices for', prices.length, 'common tokens from Jupiter');
     } catch (error) {
-      console.warn('⚠️ Failed to preload common token prices:', error);
+      console.warn('⚠️ Failed to preload common token prices from Jupiter:', error);
     }
   };
 
-  // Calculate real-time conversion without API calls
+  // Calculate real-time conversion using Jupiter prices
   const calculateRealTimeConversion = (inputAmount: number, inputMint: string, outputMint: string): number => {
     if (!inputAmount || inputAmount <= 0) return 0;
     
@@ -216,7 +210,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
     const outputPrice = tokenPrices[outputMint]?.price;
     
     if (!inputPrice || !outputPrice) {
-      console.log('⚠️ Missing prices for conversion:', { inputMint, outputMint, inputPrice, outputPrice });
+      console.log('⚠️ Missing Jupiter prices for conversion:', { inputMint, outputMint, inputPrice, outputPrice });
       return 0;
     }
     
@@ -226,7 +220,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
     }
     
     try {
-      // Calculate conversion based on current market prices
+      // Calculate conversion based on current market prices from Jupiter
       const inputValueUSD = inputAmount * inputPrice;
       const outputAmount = inputValueUSD / outputPrice;
       
@@ -258,7 +252,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       return;
     }
     
-    // Calculate real-time conversion
+    // Calculate real-time conversion using Jupiter prices
     const outputValue = calculateRealTimeConversion(inputAmount, swapInputMint, swapOutputMint);
     
     if (outputValue > 0) {
@@ -277,7 +271,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
     }
   };
 
-  // Get swap quote when needed (for final swap execution)
+  // Get swap quote from Jupiter when needed (for final swap execution)
   const getQuote = async () => {
     if (!swapAmount || !swapInputMint || !swapOutputMint || network !== 'mainnet') {
       setSwapQuote(null);
@@ -297,10 +291,11 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
     
     setIsLoadingQuote(true);
     try {
+      console.log('🔄 Getting Jupiter swap quote...');
       const quote = await getSwapQuote(swapInputMint, swapOutputMint, amountInAtomic, slippageBps);
       setSwapQuote(quote);
       
-      // Update preview with actual quote data if available
+      // Update preview with actual Jupiter quote data if available
       if (quote) {
         const outputToken = findToken(swapOutputMint);
         if (outputToken) {
@@ -318,7 +313,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
         }
       }
     } catch (error) {
-      console.error('Failed to get quote:', error);
+      console.error('Failed to get Jupiter quote:', error);
       setSwapQuote(null);
     } finally {
       setIsLoadingQuote(false);
@@ -1162,7 +1157,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Prices:</span>
+                    <span className="text-gray-600">Jupiter Prices:</span>
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       Object.keys(tokenPrices).length > 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                     }`}>
@@ -1188,15 +1183,15 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               </div>
             )}
             
-            {/* Token Status Indicator */}
+            {/* Jupiter API Status Indicator */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-blue-800">
-                  <span className="text-sm font-medium">Token Status:</span>
+                  <span className="text-sm font-medium">Jupiter API Status:</span>
                   <span className={`px-2 py-1 rounded-full text-xs ${
                     availableTokens.length > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                   }`}>
-                    {availableTokens.length} tokens available
+                    {availableTokens.length > 0 ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1207,7 +1202,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                     }}
                     disabled={isLoadingPrices || network !== 'mainnet'}
                     className="p-1 rounded hover:bg-blue-100 disabled:opacity-50"
-                    title="Refresh token prices"
+                    title="Refresh Jupiter prices"
                   >
                     <RefreshCw className={`w-4 h-4 ${isLoadingPrices ? 'animate-spin' : ''}`} />
                   </button>
@@ -1218,14 +1213,14 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               </div>
               {availableTokens.length === 0 && (
                 <p className="text-xs text-blue-600 mt-1">
-                  No tokens loaded. Click the refresh button above to load tokens.
+                  No tokens loaded. Click the refresh button above to load tokens from Jupiter.
                 </p>
               )}
-              {/* Price Status */}
+              {/* Jupiter Price Status */}
               {network === 'mainnet' && (
                 <div className="mt-2 text-xs text-blue-600">
                   <div className="flex items-center gap-2">
-                    <span>Prices:</span>
+                    <span>Real-time Prices:</span>
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       Object.keys(tokenPrices).length > 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                     }`}>
@@ -1236,6 +1231,9 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                         Last updated: {new Date(Math.max(...Object.values(tokenPrices).map(p => p.lastUpdated))).toLocaleTimeString()}
                       </span>
                     )}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Powered by Jupiter Aggregator API - Real-time prices from all major Solana DEXs
                   </div>
                 </div>
               )}
@@ -1343,6 +1341,23 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                   </div>
                 </div>
                 
+                {/* Token Price Info */}
+                {tokenPrices[swapInputMint] && (
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                    <span>Jupiter Price: ${tokenPrices[swapInputMint].price.toFixed(6)}</span>
+                    <div className="flex items-center gap-1">
+                      {tokenPrices[swapInputMint].priceChange24h > 0 ? (
+                        <TrendingUp className="w-3 h-3 text-green-500" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3 text-red-500" />
+                      )}
+                      <span className={tokenPrices[swapInputMint].priceChange24h > 0 ? 'text-green-500' : 'text-red-500'}>
+                        {Math.abs(tokenPrices[swapInputMint].priceChange24h).toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Real-time Input Feedback */}
                 {swapAmount && parseFloat(swapAmount) > 0 && (
                   <div className="mb-2 p-2 bg-white rounded-lg border">
@@ -1362,34 +1377,17 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                     )}
                     {swapPreview ? (
                       <div className="flex items-center justify-between text-xs mt-1">
-                        <span className="text-gray-600">Conversion Ready:</span>
+                        <span className="text-gray-600">Jupiter Conversion:</span>
                         <span className="text-green-600 font-medium">✓ Live</span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between text-xs mt-1">
                         <span className="text-gray-600">Status:</span>
                         <span className="text-yellow-600 font-medium">
-                          {isLoadingPrices ? '🔄 Fetching prices...' : '⏳ Waiting for prices...'}
+                          {isLoadingPrices ? '🔄 Fetching Jupiter prices...' : '⏳ Waiting for Jupiter prices...'}
                         </span>
                       </div>
                     )}
-                  </div>
-                )}
-                
-                {/* Token Price Info */}
-                {tokenPrices[swapInputMint] && (
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                    <span>Price: ${tokenPrices[swapInputMint].price.toFixed(6)}</span>
-                    <div className="flex items-center gap-1">
-                      {tokenPrices[swapInputMint].priceChange24h > 0 ? (
-                        <TrendingUp className="w-3 h-3 text-green-500" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3 text-red-500" />
-                      )}
-                      <span className={tokenPrices[swapInputMint].priceChange24h > 0 ? 'text-green-500' : 'text-red-500'}>
-                        {Math.abs(tokenPrices[swapInputMint].priceChange24h).toFixed(2)}%
-                      </span>
-                    </div>
                   </div>
                 )}
                 
@@ -1582,7 +1580,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 {swapAmount && parseFloat(swapAmount) > 0 && (
                   <div className="mt-3 p-2 bg-white rounded-lg border">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Conversion Status:</span>
+                      <span className="text-gray-600">Jupiter Status:</span>
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         swapPreview ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                       }`}>
@@ -1609,30 +1607,13 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                     )}
                   </div>
                 )}
-                
-                {/* Token Price Info */}
-                {tokenPrices[swapOutputMint] && (
-                  <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
-                    <span>Price: ${tokenPrices[swapOutputMint].price.toFixed(6)}</span>
-                    <div className="flex items-center gap-1">
-                      {tokenPrices[swapOutputMint].priceChange24h > 0 ? (
-                        <TrendingUp className="w-3 h-3 text-green-500" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3 text-red-500" />
-                      )}
-                      <span className={tokenPrices[swapOutputMint].priceChange24h > 0 ? 'text-green-500' : 'text-red-500'}>
-                        {Math.abs(tokenPrices[swapOutputMint].priceChange24h).toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
               
               {/* Exchange Rate Display */}
               {swapPreview && (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-3">
                   <div className="text-center">
-                    <div className="text-sm text-gray-600 mb-1">Exchange Rate</div>
+                    <div className="text-sm text-gray-600 mb-1">Jupiter Exchange Rate</div>
                     <div className="text-lg font-bold text-blue-800">
                       1 {findToken(swapInputMint)?.symbol} = {swapPreview.exchangeRate.toFixed(6)} {findToken(swapOutputMint)?.symbol}
                     </div>
@@ -1642,6 +1623,9 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                         {parseFloat(swapAmount).toFixed(6)} {findToken(swapInputMint)?.symbol} = {swapPreview.outputValue.toFixed(6)} {findToken(swapOutputMint)?.symbol}
                       </div>
                     )}
+                    <div className="text-xs text-blue-500 mt-2">
+                      Powered by Jupiter Aggregator - Real-time prices from all major DEXs
+                    </div>
                   </div>
                 </div>
               )}
@@ -1649,7 +1633,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               {/* Real-time Conversion Preview */}
               {swapAmount && parseFloat(swapAmount) > 0 && swapPreview && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="text-sm font-medium text-green-800 mb-2">Conversion Preview</div>
+                  <div className="text-sm font-medium text-green-800 mb-2">Jupiter Conversion Preview</div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">You Pay:</span>
@@ -1665,7 +1649,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                     </div>
                     {tokenPrices[swapInputMint]?.price && tokenPrices[swapOutputMint]?.price && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Value:</span>
+                        <span className="text-gray-600">USD Value:</span>
                         <span className="font-medium text-gray-800">
                           ${(parseFloat(swapAmount) * tokenPrices[swapInputMint].price).toFixed(2)} → ${(swapPreview.outputValue * tokenPrices[swapOutputMint].price).toFixed(2)}
                         </span>
@@ -1678,7 +1662,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               {/* Swap Preview */}
               {swapPreview && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                  <div className="text-sm font-medium text-blue-800">Swap Details</div>
+                  <div className="text-sm font-medium text-blue-800">Jupiter Swap Details</div>
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Price Impact:</span>
@@ -1689,6 +1673,10 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                     <div className="flex justify-between">
                       <span className="text-gray-600">Network Fee:</span>
                       <span className="font-medium">~{swapPreview.fee.toFixed(6)} SOL</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Data Source:</span>
+                      <span className="font-medium text-blue-600">Jupiter API</span>
                     </div>
                   </div>
                 </div>
