@@ -1017,18 +1017,52 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               <h3 className="font-semibold text-gray-800">RPC Settings</h3>
               <button onClick={() => setShowRpc(false)}>✕</button>
             </div>
+            
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mainnet RPC URL</label>
-                <input value={rpcMainnet} onChange={(e) => setRpcMainnet(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="https://..." />
+                <input value={rpcMainnet} onChange={(e) => setRpcMainnet(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="https://api.mainnet-beta.solana.com" />
+                <div className="text-xs text-gray-500 mt-1">
+                  Default: https://api.mainnet-beta.solana.com
+                </div>
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Devnet RPC URL</label>
-                <input value={rpcDevnet} onChange={(e) => setRpcDevnet(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="https://..." />
+                <input value={rpcDevnet} onChange={(e) => setRpcDevnet(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="https://api.devnet.solana.com" />
+                <div className="text-xs text-gray-500 mt-1">
+                  Default: https://api.devnet.solana.com
+                </div>
               </div>
-              <p className="text-xs text-gray-500">Changes will refresh the app.</p>
+              
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                <div className="text-sm font-medium text-blue-800 mb-2">Recommended Public RPCs:</div>
+                <div className="space-y-2 text-xs text-blue-700">
+                  <div>
+                    <strong>Mainnet:</strong>
+                    <div className="ml-2 space-y-1">
+                      <div>• https://api.mainnet-beta.solana.com (Official)</div>
+                      <div>• https://solana-api.projectserum.com</div>
+                      <div>• https://rpc.ankr.com/solana (Requires API key)</div>
+                    </div>
+                  </div>
+                  <div>
+                    <strong>Devnet:</strong>
+                    <div className="ml-2">• https://api.devnet.solana.com (Official)</div>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-xs text-gray-500">Changes will refresh the app. Use official endpoints for reliability.</p>
             </div>
-            <button onClick={handleSaveRpc} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold">Save</button>
+            
+            <div className="flex space-x-2">
+              <button onClick={handleSaveRpc} className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold">Save</button>
+              <button onClick={() => {
+                setRpcMainnet('https://api.mainnet-beta.solana.com');
+                setRpcDevnet('https://api.devnet.solana.com');
+              }} className="px-4 py-3 border border-gray-300 rounded-lg text-gray-700">Reset to Defaults</button>
+            </div>
           </div>
         </div>
       )}

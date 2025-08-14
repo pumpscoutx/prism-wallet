@@ -8,17 +8,28 @@ export class SolanaUtils {
   static getConnection(network: 'mainnet' | 'devnet'): Connection {
     if (!this.connections[network]) {
       const defaultUrls = {
-        mainnet: 'https://rpc.ankr.com/solana',
+        mainnet: 'https://api.mainnet-beta.solana.com',
         devnet: 'https://api.devnet.solana.com'
       } as const;
+      
       let rpcUrl: string = defaultUrls[network];
+      
       try {
         const override = typeof localStorage !== 'undefined' ? localStorage.getItem(`prism_rpc_${network}`) : null;
         if (override && /^https?:\/\//.test(override)) {
           rpcUrl = override;
         }
       } catch {}
-      this.connections[network] = new Connection(rpcUrl, 'confirmed');
+      
+      // Create connection with better configuration
+      this.connections[network] = new Connection(rpcUrl, {
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: 60000, // 60 seconds
+        disableRetryOnRateLimit: false,
+        httpHeaders: {
+          'User-Agent': 'Prism-Wallet/1.0.0'
+        }
+      });
     }
     return this.connections[network];
   }

@@ -49,13 +49,31 @@ export const getAllTokens = async (): Promise<KnownToken[]> => {
 
   try {
     console.log('🔄 Fetching token list from Jupiter...');
-    const response = await fetch(JUPITER_TOKEN_LIST_URL);
+    
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const response = await fetch(JUPITER_TOKEN_LIST_URL, {
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Prism-Wallet/1.0.0'
+      }
+    });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
+    
+    // Validate response structure
+    if (!data || !data.tokens || !Array.isArray(data.tokens)) {
+      throw new Error('Invalid response format from Jupiter API');
+    }
     
     // Transform Jupiter token data to our format
     const tokens: KnownToken[] = data.tokens.map((token: any) => ({
@@ -95,6 +113,7 @@ export const getAllTokens = async (): Promise<KnownToken[]> => {
     }
     
     // Fallback to default tokens
+    console.log('🔄 Using fallback default tokens');
     return [
       {
         symbol: 'SOL',
@@ -192,7 +211,19 @@ export const fetchTokenPrices = async (mints: string[]): Promise<TokenPrice[]> =
   try {
     console.log(`🔄 Fetching prices for ${uncachedMints.length} tokens from Jupiter...`);
     
-    const response = await fetch(`${JUPITER_PRICE_URL}?ids=${uncachedMints.join(',')}`);
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(`${JUPITER_PRICE_URL}?ids=${uncachedMints.join(',')}`, {
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Prism-Wallet/1.0.0'
+      }
+    });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -244,9 +275,22 @@ export const getSwapQuote = async (
   try {
     console.log(`🔄 Getting swap quote for ${amountIn} of ${inputMint} to ${outputMint}`);
     
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
     const response = await fetch(
-      `${JUPITER_QUOTE_URL}?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountIn}&slippageBps=${slippageBps}`
+      `${JUPITER_QUOTE_URL}?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountIn}&slippageBps=${slippageBps}`,
+      {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Prism-Wallet/1.0.0'
+        }
+      }
     );
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
