@@ -27,7 +27,9 @@ function App() {
     exportSecretKey,
     switchNetwork,
     getCurrentAccount,
-    selectAccount
+    selectAccount,
+    renameAccount,
+    removeAccount
   } = useWallet();
 
   const [setupMode, setSetupMode] = useState<'welcome' | 'create' | 'import'>('welcome');
@@ -40,7 +42,7 @@ function App() {
   if (walletState.accounts.length > 0 && walletState.isLocked) {
     return (
       <div className="w-80 h-96 bg-white">
-        <UnlockWallet onUnlock={unlockWallet} loading={loading} />
+        <UnlockWallet onUnlock={unlockWallet} loading={loading} onForgotPassword={() => setSetupMode('import')} />
       </div>
     );
   }
@@ -72,6 +74,8 @@ function App() {
               onImportPrivateKey={importPrivateKey}
               onSwap={(inMint, outMint, amountUi, inDec, slippageBps) => swapTokens(inMint, outMint, amountUi, inDec, slippageBps)}
               onStartCreateWallet={() => setSetupMode('create')}
+              onRenameAccount={renameAccount}
+              onRemoveAccount={removeAccount}
             />
           </div>
         </div>

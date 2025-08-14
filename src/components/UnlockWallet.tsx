@@ -4,9 +4,10 @@ import { Eye, EyeOff, Lock } from 'lucide-react';
 interface UnlockWalletProps {
   onUnlock: (password: string) => Promise<boolean>;
   loading: boolean;
+  onForgotPassword?: () => void;
 }
 
-export const UnlockWallet: React.FC<UnlockWalletProps> = ({ onUnlock, loading }) => {
+export const UnlockWallet: React.FC<UnlockWalletProps> = ({ onUnlock, loading, onForgotPassword }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -71,10 +72,18 @@ export const UnlockWallet: React.FC<UnlockWalletProps> = ({ onUnlock, loading })
         </button>
       </form>
 
-      <div className="text-center">
+      <div className="text-center space-y-2">
         <p className="text-xs text-gray-500">
           Forgot your password? You'll need to import your wallet using your recovery phrase.
         </p>
+        {onForgotPassword && (
+          <button
+            onClick={onForgotPassword}
+            className="text-xs text-blue-600 hover:underline"
+          >
+            Recover wallet
+          </button>
+        )}
       </div>
     </div>
   );

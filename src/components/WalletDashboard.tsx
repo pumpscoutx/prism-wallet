@@ -24,6 +24,8 @@ interface WalletDashboardProps {
   onImportPrivateKey?: (secret: string, password: string, accountName: string) => Promise<void>;
   onSwap?: (inputMint: string, outputMint: string, amountUi: number, inputDecimals: number, slippageBps?: number) => Promise<string>;
   onStartCreateWallet?: () => void;
+  onRenameAccount?: (accountId: string, newName: string) => Promise<void> | void;
+  onRemoveAccount?: (accountId: string) => Promise<void> | void;
 }
 
 export const WalletDashboard: React.FC<WalletDashboardProps> = ({
@@ -46,6 +48,8 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
   onImportPrivateKey,
   onSwap,
   onStartCreateWallet,
+  onRenameAccount,
+  onRemoveAccount,
 }) => {
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState<'tokens' | 'activity'>('tokens');
@@ -75,6 +79,11 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
   const [swapDecimals, setSwapDecimals] = useState('9');
   const [swapSig, setSwapSig] = useState<string>('');
   const [swapError, setSwapError] = useState<string>('');
+
+  // Manage accounts state
+  const [showManageAccounts, setShowManageAccounts] = useState(false);
+  const [editAccountId, setEditAccountId] = useState<string | null>(null);
+  const [editAccountName, setEditAccountName] = useState('');
 
   // Enhanced swap state
   const [swapQuote, setSwapQuote] = useState<SwapQuote | null>(null);
@@ -738,6 +747,9 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               <button onClick={() => setShowRpc(true)} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
                 <Settings className="w-4 h-4" /> RPC Settings
               </button>
+              <button onClick={() => setShowManageAccounts(true)} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
+                <Settings className="w-4 h-4" /> Manage accounts
+              </button>
             </div>
           )}
           <div>
@@ -1022,6 +1034,90 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               <p className="text-xs text-gray-500">Changes will refresh the app.</p>
             </div>
             <button onClick={handleSaveRpc} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold">Save</button>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Accounts Modal */}
+      {showManageAccounts && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center">
+          <div className="w-full max-w-sm bg-white rounded-t-2xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">Manage Accounts</h3>
+              <button onClick={() => { setShowManageAccounts(false); setEditAccountId(null); setEditAccountName(''); }}>✕</button>
+            </div>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {accounts.length === 0 && (
+                <div className="text-sm text-gray-500">No accounts</div>
+              )}
+              {accounts.map(acc => (
+                <div key={acc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                  <div className="flex-1 mr-2">
+                    {editAccountId === acc.id ? (
+                      <input
+                        value={editAccountName}
+                        onChange={(e) => setEditAccountName(e.target.value)}
+                        className="w-full px-2 py-1 border rounded"
+                      />
+                    ) : (
+                      <div className="font-medium text-gray-800 truncate">{acc.name}</div>
+                    )}
+                    <div className="text-xs text-gray-500 font-mono truncate">{acc.publicKey}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {editAccountId === acc.id ? (
+                      <>
+                        <button
+                          className="text-xs px-2 py-1 rounded bg-purple-500 text-white"
+                          onClick={async () => {
+                            if (onRenameAccount && editAccountName.trim()) {
+                              await onRenameAccount(acc.id, editAccountName.trim());
+                              setEditAccountId(null);
+                              setEditAccountName('');
+                            }
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="text-xs px-2 py-1 rounded bg-gray-200"
+                          onClick={() => { setEditAccountId(null); setEditAccountName(''); }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="text-xs px-2 py-1 rounded bg-gray-200"
+                          onClick={() => { setEditAccountId(acc.id); setEditAccountName(acc.name); }}
+                        >
+                          Rename
+                        </button>
+                        <button
+                          className="text-xs px-2 py-1 rounded bg-red-500 text-white"
+                          onClick={async () => {
+                            if (onRemoveAccount) {
+                              const ok = window.confirm('Remove this account from this device? You can re-import with recovery phrase or private key.');
+                              if (ok) {
+                                await onRemoveAccount(acc.id);
+                              }
+                            }
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-xs text-gray-500">
+              Removing an account only deletes it from this device. Keep your recovery phrase safe to restore access.
+            </div>
           </div>
         </div>
       )}

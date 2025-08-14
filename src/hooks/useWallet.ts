@@ -346,6 +346,32 @@ export const useWallet = () => {
     }
   }, [walletState, saveWalletState]);
 
+  // Account management
+  const renameAccount = useCallback(async (accountId: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    const updatedAccounts = walletState.accounts.map(acc => acc.id === accountId ? { ...acc, name: trimmed } : acc);
+    await saveWalletState({
+      ...walletState,
+      accounts: updatedAccounts
+    });
+  }, [walletState, saveWalletState]);
+
+  const removeAccount = useCallback(async (accountId: string) => {
+    const remaining = walletState.accounts.filter(acc => acc.id !== accountId);
+    let newCurrentId = walletState.currentAccountId;
+    if (walletState.currentAccountId === accountId) {
+      newCurrentId = remaining.length > 0 ? remaining[0].id : null;
+    }
+    await saveWalletState({
+      ...walletState,
+      accounts: remaining,
+      currentAccountId: newCurrentId,
+      // If no accounts remain, lock the wallet
+      isLocked: remaining.length === 0 ? true : walletState.isLocked
+    });
+  }, [walletState, saveWalletState]);
+
   useEffect(() => {
     loadWalletState();
   }, [loadWalletState]);
@@ -392,6 +418,8 @@ export const useWallet = () => {
     exportMnemonic,
     switchNetwork,
     getCurrentAccount,
-    selectAccount
+    selectAccount,
+    renameAccount,
+    removeAccount
   };
 };
