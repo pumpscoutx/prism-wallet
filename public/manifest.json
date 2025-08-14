@@ -10,7 +10,12 @@
   "host_permissions": [
     "https://*.solana.com/*",
     "https://*.helius.xyz/*",
-    "https://*.quicknode.pro/*"
+    "https://*.quicknode.pro/*",
+    "https://quote-api.jup.ag/*",
+    "https://token.jup.ag/*",
+    "https://price.jup.ag/*",
+    "https://dev.jup.ag/*",
+    "https://lite-api.jup.ag/*"
   ],
   "background": {
     "service_worker": "background.js"

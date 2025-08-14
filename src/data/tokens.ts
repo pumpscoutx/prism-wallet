@@ -27,10 +27,19 @@ export interface SwapQuote {
   routes: any[];
 }
 
-// Jupiter API endpoints
-const JUPITER_TOKEN_LIST_URL = 'https://token.jup.ag/all';
-const JUPITER_PRICE_URL = 'https://price.jup.ag/v4/price';
-const JUPITER_QUOTE_URL = 'https://quote-api.jup.ag/v6/quote';
+// Background service worker communication
+const sendMessageToBackground = (message: any): Promise<any> => {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage(message, (response) => {
+        resolve(response || { ok: false, error: 'No response from background' });
+      });
+    } else {
+      // Fallback for non-extension environment (development)
+      resolve({ ok: false, error: 'Chrome extension API not available' });
+    }
+  });
+};
 
 // Cache for token list and prices
 let tokenListCache: KnownToken[] = [];
@@ -48,27 +57,15 @@ export const getAllTokens = async (): Promise<KnownToken[]> => {
   }
 
   try {
-    console.log('🔄 Fetching token list from Jupiter...');
+    console.log('🔄 Fetching token list via background service worker...');
     
-    // Add timeout to prevent hanging requests
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(JUPITER_TOKEN_LIST_URL, {
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Prism-Wallet/1.0.0'
-      }
-    });
-    
-    clearTimeout(timeoutId);
+    const response = await sendMessageToBackground({ type: 'GET_TOKENS' });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Background service worker error: ${response.error || response.status}`);
     }
     
-    const data = await response.json();
+    const data = response.body;
     
     // Validate response structure
     if (!data || !data.tokens || !Array.isArray(data.tokens)) {
@@ -96,7 +93,7 @@ export const getAllTokens = async (): Promise<KnownToken[]> => {
       token.decimals > 0
     );
 
-    console.log(`✅ Fetched ${validTokens.length} tokens from Jupiter`);
+    console.log(`✅ Fetched ${validTokens.length} tokens via background service worker`);
     
     // Update cache
     tokenListCache = validTokens;
@@ -104,7 +101,7 @@ export const getAllTokens = async (): Promise<KnownToken[]> => {
     
     return validTokens;
   } catch (error) {
-    console.error('❌ Failed to fetch tokens from Jupiter:', error);
+    console.error('❌ Failed to fetch tokens via background service worker:', error);
     
     // Return cached tokens if available, even if expired
     if (tokenListCache.length > 0) {
@@ -209,32 +206,23 @@ export const fetchTokenPrices = async (mints: string[]): Promise<TokenPrice[]> =
   }
   
   try {
-    console.log(`🔄 Fetching prices for ${uncachedMints.length} tokens from Jupiter...`);
+    console.log(`🔄 Fetching prices for ${uncachedMints.length} tokens via background service worker...`);
     
-    // Add timeout to prevent hanging requests
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    const response = await fetch(`${JUPITER_PRICE_URL}?ids=${uncachedMints.join(',')}`, {
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Prism-Wallet/1.0.0'
-      }
+    const response = await sendMessageToBackground({
+      type: 'GET_PRICE_FOR_MINTS',
+      payload: { mints: uncachedMints }
     });
     
-    clearTimeout(timeoutId);
-    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Background service worker error: ${response.error || response.status}`);
     }
     
-    const data = await response.json();
+    const data = response.body;
     
     const newPrices: TokenPrice[] = [];
     
     uncachedMints.forEach(mint => {
-      const priceData = data.data[mint];
+      const priceData = data.data?.[mint];
       if (priceData) {
         const price: TokenPrice = {
           mint,
@@ -248,13 +236,13 @@ export const fetchTokenPrices = async (mints: string[]): Promise<TokenPrice[]> =
       }
     });
     
-    console.log(`✅ Fetched ${newPrices.length} new prices from Jupiter`);
+    console.log(`✅ Fetched ${newPrices.length} new prices via background service worker`);
     
     // Return both cached and new prices
     return [...cachedPrices, ...newPrices];
     
   } catch (error) {
-    console.error('❌ Failed to fetch prices from Jupiter:', error);
+    console.error('❌ Failed to fetch prices via background service worker:', error);
     
     // Return cached prices if available, even if expired
     if (cachedPrices.length > 0) {
@@ -273,30 +261,23 @@ export const getSwapQuote = async (
   slippageBps: number = 100
 ): Promise<SwapQuote | null> => {
   try {
-    console.log(`🔄 Getting swap quote for ${amountIn} of ${inputMint} to ${outputMint}`);
+    console.log(`🔄 Getting swap quote via background service worker for ${amountIn} of ${inputMint} to ${outputMint}`);
     
-    // Add timeout to prevent hanging requests
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(
-      `${JUPITER_QUOTE_URL}?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountIn}&slippageBps=${slippageBps}`,
-      {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Prism-Wallet/1.0.0'
-        }
+    const response = await sendMessageToBackground({
+      type: 'GET_QUOTE',
+      payload: { 
+        inputMint, 
+        outputMint, 
+        amountBaseUnits: amountIn, 
+        slippageBps 
       }
-    );
-    
-    clearTimeout(timeoutId);
+    });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Background service worker error: ${response.error || response.status}`);
     }
     
-    const data = await response.json();
+    const data = response.body;
     
     if (data.error) {
       throw new Error(data.error);
@@ -312,12 +293,12 @@ export const getSwapQuote = async (
       routes: data.routes || []
     };
     
-    console.log(`✅ Got quote: ${quote.outputAmount} output with ${quote.priceImpact}% price impact`);
+    console.log(`✅ Got quote via background service worker: ${quote.outputAmount} output with ${quote.priceImpact}% price impact`);
     
     return quote;
     
   } catch (error) {
-    console.error('❌ Failed to get swap quote:', error);
+    console.error('❌ Failed to get swap quote via background service worker:', error);
     return null;
   }
 };

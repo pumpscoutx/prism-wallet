@@ -1240,6 +1240,66 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                   >
                     <RefreshCw className={`w-4 h-4 ${isLoadingPrices ? 'animate-spin' : ''}`} />
                   </button>
+                  <button
+                    onClick={async () => {
+                      console.log('🔍 Running Jupiter API diagnostic...');
+                      try {
+                        // Test token list
+                        const tokenResponse = await new Promise((resolve) => {
+                          if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                            chrome.runtime.sendMessage({ type: 'GET_TOKENS' }, (response) => {
+                              resolve(response || { ok: false, error: 'No response' });
+                            });
+                          } else {
+                            resolve({ ok: false, error: 'Chrome extension API not available' });
+                          }
+                        });
+                        
+                        console.log('🔍 Token list response:', tokenResponse);
+                        
+                        // Test price fetch
+                        const priceResponse = await new Promise((resolve) => {
+                          if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                            chrome.runtime.sendMessage({
+                              type: 'GET_PRICE_FOR_MINTS',
+                              payload: { mints: ['So11111111111111111111111111111111111111112'] }
+                            }, (response) => {
+                              resolve(response || { ok: false, error: 'No response' });
+                            });
+                          } else {
+                            resolve({ ok: false, error: 'Chrome extension API not available' });
+                          }
+                        });
+                        
+                        console.log('🔍 Price fetch response:', priceResponse);
+                        
+                        // Show results in UI
+                        const diagnosticInfo = `
+Jupiter API Diagnostic Results:
+
+Token List:
+- Status: ${tokenResponse.ok ? '✅ OK' : '❌ Failed'}
+- Response: ${JSON.stringify(tokenResponse, null, 2)}
+
+Price Fetch:
+- Status: ${priceResponse.ok ? '✅ OK' : '❌ Failed'}
+- Response: ${JSON.stringify(priceResponse, null, 2)}
+
+Check console for detailed logs.
+                        `;
+                        
+                        alert(diagnosticInfo);
+                        
+                      } catch (error) {
+                        console.error('🔍 Diagnostic failed:', error);
+                        alert(`Diagnostic failed: ${error.message}`);
+                      }
+                    }}
+                    className="p-1 rounded hover:bg-blue-100"
+                    title="Run Jupiter API diagnostic"
+                  >
+                    🔍
+                  </button>
                   <div className="text-xs text-blue-600">
                     {isLoadingPrices ? '🔄 Loading...' : '✅ Ready'}
                   </div>
@@ -1267,7 +1327,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                     )}
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
-                    Powered by Jupiter Aggregator API - Real-time prices from all major Solana DEXs
+                    Powered by Jupiter Aggregator API via Background Service Worker
                   </div>
                 </div>
               )}
