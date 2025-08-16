@@ -292,34 +292,58 @@ export const useWallet = () => {
     try {
       setLoading(true);
       const trimmed = privateKeyInput.trim();
-      let secretBytes: Uint8Array | null = null;
+      let keypair: Keypair | null = null;
 
-      // JSON array format
-      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        const arr = JSON.parse(trimmed) as number[];
-        secretBytes = new Uint8Array(arr);
-      } else if (/^[0-9a-fA-F]+$/.test(trimmed)) {
-        // hex format
-        secretBytes = CryptoUtils.hexToUint8Array(trimmed);
+      // Check if it's a recovery phrase (12 words)
+      const words = trimmed.split(/\s+/);
+      if (words.length === 12 && words.every(word => /^[a-z]+$/.test(word))) {
+        try {
+          // Import recovery phrase using BIP39
+          const { mnemonicToSeedSync } = await import('bip39');
+          const seed = mnemonicToSeedSync(trimmed);
+          const { derivePath } = await import('ed25519-hd-key');
+          const derivedSeed = derivePath("m/44'/501'/0'/0'", seed.toString('hex')).key;
+          keypair = Keypair.fromSeed(derivedSeed);
+        } catch (error) {
+          console.error('Error processing recovery phrase:', error);
+          throw new Error('Invalid recovery phrase format');
+        }
       } else {
-        // assume base58
-        secretBytes = bs58.decode(trimmed);
+        // Handle other formats (Base58, hex, JSON)
+        let secretBytes: Uint8Array | null = null;
+
+        // JSON array format
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          const arr = JSON.parse(trimmed) as number[];
+          secretBytes = new Uint8Array(arr);
+        } else if (/^[0-9a-fA-F]+$/.test(trimmed)) {
+          // hex format
+          secretBytes = CryptoUtils.hexToUint8Array(trimmed);
+        } else {
+          // assume base58
+          secretBytes = bs58.decode(trimmed);
+        }
+
+        if (!(secretBytes instanceof Uint8Array)) {
+          throw new Error('Invalid secret key format');
+        }
+
+        if (secretBytes.length === 64) {
+          keypair = Keypair.fromSecretKey(secretBytes);
+        } else if (secretBytes.length === 32) {
+          keypair = Keypair.fromSeed(secretBytes);
+        } else {
+          throw new Error('Secret key must be 32 or 64 bytes');
+        }
       }
 
-      if (!(secretBytes instanceof Uint8Array)) {
-        throw new Error('Invalid secret key format');
+      if (!keypair) {
+        throw new Error('Failed to create keypair from input');
       }
 
-      let keypair: Keypair;
-      if (secretBytes.length === 64) {
-        keypair = Keypair.fromSecretKey(secretBytes);
-      } else if (secretBytes.length === 32) {
-        keypair = Keypair.fromSeed(secretBytes);
-      } else {
-        throw new Error('Secret key must be 32 or 64 bytes');
-      }
-
-      const encryptedPrivateKey = CryptoUtils.encrypt(Buffer.from(keypair.secretKey).toString('hex'), walletPassword);
+      // Use empty password if none provided, or use provided password
+      const passwordToUse = walletPassword || '';
+      const encryptedPrivateKey = CryptoUtils.encrypt(Buffer.from(keypair.secretKey).toString('hex'), passwordToUse);
 
       const account: WalletAccount = {
         id: Date.now().toString(),
@@ -337,7 +361,7 @@ export const useWallet = () => {
       };
 
       await saveWalletState(newState);
-      setPassword(walletPassword);
+      setPassword(passwordToUse);
     } catch (error) {
       console.error('Error importing private key:', error);
       throw error;

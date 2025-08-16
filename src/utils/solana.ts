@@ -8,7 +8,7 @@ export class SolanaUtils {
   static getConnection(network: 'mainnet' | 'devnet'): Connection {
     if (!this.connections[network]) {
       const defaultUrls = {
-        mainnet: 'https://api.mainnet-beta.solana.com',
+        mainnet: 'https://burned-practical-silence.solana-mainnet.quiknode.pro/99cfeea2642ed8ddd6e1ef4289e54bc15d35e189/',
         devnet: 'https://api.devnet.solana.com'
       } as const;
       

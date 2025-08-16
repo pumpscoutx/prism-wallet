@@ -15,11 +15,6 @@ export const UnlockWallet: React.FC<UnlockWalletProps> = ({ onUnlock, loading, o
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    if (!password) {
-      setError('Please enter your password');
-      return;
-    }
 
     const success = await onUnlock(password);
     if (!success) {
@@ -49,7 +44,7 @@ export const UnlockWallet: React.FC<UnlockWalletProps> = ({ onUnlock, loading, o
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="Enter your password"
+              placeholder="Enter your password (optional)"
               autoFocus
             />
             <button
@@ -65,7 +60,7 @@ export const UnlockWallet: React.FC<UnlockWalletProps> = ({ onUnlock, loading, o
 
         <button
           type="submit"
-          disabled={loading || !password}
+          disabled={loading}
           className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {loading ? 'Unlocking...' : 'Unlock Wallet'}

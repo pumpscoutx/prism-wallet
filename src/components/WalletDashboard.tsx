@@ -364,6 +364,39 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
     }
   }, [network]);
 
+  // Auto-refresh prices every 3 seconds for real-time updates
+  useEffect(() => {
+    if (network === 'mainnet' && showSwap) {
+      const interval = setInterval(() => {
+        // Refresh prices for current swap tokens
+        if (swapInputMint && swapOutputMint) {
+          fetchPrices();
+        }
+      }, 3000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [network, showSwap, swapInputMint, swapOutputMint]);
+
+  // Test Jupiter API on component mount
+  useEffect(() => {
+    if (network === 'mainnet') {
+      const testJupiterAPI = async () => {
+        try {
+          console.log('🧪 Testing Jupiter API connection...');
+          const testMints = ['So11111111111111111111111111111111111111112']; // SOL
+          const { getPrices } = await import('../data/tokens');
+          const prices = await getPrices(testMints);
+          console.log('✅ Jupiter API test successful:', prices);
+        } catch (error) {
+          console.error('❌ Jupiter API test failed:', error);
+        }
+      };
+      
+      testJupiterAPI();
+    }
+  }, [network]);
+
   // Preload prices when swap modal opens
   useEffect(() => {
     if (showSwap && network === 'mainnet') {
@@ -591,7 +624,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
   const handleImportPk = async () => {
     if (!onImportPrivateKey) return;
     try {
-      await onImportPrivateKey(importPkValue.trim(), importPkPass, importPkName || 'Imported Account');
+      await onImportPrivateKey(importPkValue.trim(), '', importPkName || 'Imported Account');
       setShowImportPk(false);
       setImportPkValue(''); setImportPkName('Imported Account'); setImportPkPass('');
     } catch (e) {
@@ -733,17 +766,29 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
               <button onClick={() => onStartCreateWallet && onStartCreateWallet()} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
                 <Plus className="w-4 h-4" /> Create wallet
               </button>
-              <button onClick={() => setShowImportPk(true)} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Import private key
+              <button onClick={() => setShowImportPk(true)} className="w-full text-left px-3 py-2 hover:bg-gradient-to-r hover:from-green-500/10 hover:to-emerald-500/10 flex items-center gap-2 transition-all duration-200 group">
+                <div className="w-8 h-8 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg flex items-center justify-center border border-green-500/30 group-hover:border-green-500/50 group-hover:shadow-lg group-hover:shadow-green-500/20 transition-all duration-200">
+                  <Plus className="w-4 h-4 text-green-400 group-hover:text-green-300" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-green-600 transition-colors duration-200">Import Private Key</span>
               </button>
-              <button onClick={() => setShowExport(true)} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                <KeyRound className="w-4 h-4" /> Export Secret Key
+              <button onClick={() => setShowExport(true)} className="w-full text-left px-3 py-2 hover:bg-gradient-to-r hover:from-orange-500/10 hover:to-red-500/10 flex items-center gap-2 transition-all duration-200 group">
+                <div className="w-8 h-8 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-lg flex items-center justify-center border border-orange-500/30 group-hover:border-orange-500/50 group-hover:shadow-lg group-hover:shadow-orange-500/20 transition-all duration-200">
+                  <KeyRound className="w-4 h-4 text-orange-400 group-hover:text-orange-300" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-orange-600 transition-colors duration-200">Export Secret Key</span>
               </button>
-              <button onClick={() => setShowRpc(true)} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                <Settings className="w-4 h-4" /> RPC Settings
+              <button onClick={() => setShowRpc(true)} className="w-full text-left px-3 py-2 hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-pink-500/10 flex items-center gap-2 transition-all duration-200 group">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg flex items-center justify-center border border-purple-500/30 group-hover:border-purple-500/50 group-hover:shadow-lg group-hover:shadow-purple-500/20 transition-all duration-200">
+                  <Settings className="w-4 h-4 text-purple-400 group-hover:text-purple-300" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-purple-600 transition-colors duration-200">RPC Settings</span>
               </button>
-              <button onClick={() => setShowManageAccounts(true)} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                <Settings className="w-4 h-4" /> Manage accounts
+              <button onClick={() => setShowManageAccounts(true)} className="w-full text-left px-3 py-2 hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-cyan-500/10 flex items-center gap-2 transition-all duration-200 group">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-lg flex items-center justify-center border border-blue-500/30 group-hover:border-blue-500/50 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-200">
+                  <Settings className="w-4 h-4 text-blue-400 group-hover:text-blue-300" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-blue-600 transition-colors duration-200">Manage Accounts</span>
               </button>
             </div>
           )}
@@ -794,9 +839,14 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
           </button>
         </div>
         <div className="w-full flex justify-center mt-3">
-          <button className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-white/30 hover:bg-white/40 text-white transition-colors" onClick={() => setShowSwap(true)}>
-            <Shuffle className="w-5 h-5 mb-1" />
-            <span className="text-xs font-medium">Swap</span>
+          <button 
+            className="flex flex-col items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 hover:from-purple-500/50 hover:to-pink-500/50 text-white transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/30 border border-purple-500/50" 
+            onClick={() => setShowSwap(true)}
+          >
+            <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center mb-1 shadow-lg">
+              <Shuffle className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xs font-semibold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">Swap</span>
           </button>
         </div>
         {network === 'devnet' && onAirdrop && (
@@ -999,10 +1049,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
                 <input value={importPkName} onChange={(e) => setImportPkName(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input type="password" value={importPkPass} onChange={(e) => setImportPkPass(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Encrypt with a password" />
-              </div>
+
             </div>
             <button onClick={handleImportPk} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold">Import</button>
           </div>
@@ -1154,244 +1201,104 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       {/* Swap Modal */}
       
       {showSwap && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center">
-          <div className="w-full max-w-sm bg-white rounded-t-2xl p-4 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end justify-center z-50">
+          <div className="w-full max-w-xs bg-gradient-to-b from-gray-900 to-black rounded-t-3xl p-4 space-y-4 max-h-[85vh] overflow-y-auto border border-purple-500/30 shadow-2xl shadow-purple-500/20">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-800">Swap Tokens</h3>
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => {
-                    setIsLoadingTokens(true);
-                    getAllTokens().then(tokens => {
-                      setAvailableTokens(tokens);
-                      setFilteredTokens(tokens);
-                      setIsLoadingTokens(false);
-                    }).catch(() => setIsLoadingTokens(false));
-                  }}
-                  disabled={isLoadingTokens}
-                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-50"
-                  title="Refresh tokens"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoadingTokens ? 'animate-spin' : ''}`} />
-                </button>
-                <button onClick={() => { setShowSwap(false); setSwapSig(''); setSwapError(''); }}>✕</button>
-              </div>
-            </div>
-            
-            {/* Status Bar */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Tokens:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      availableTokens.length > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {availableTokens.length} available
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Jupiter Prices:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      Object.keys(tokenPrices).length > 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {Object.keys(tokenPrices).length} loaded
-                    </span>
-                  </div>
+                <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <Shuffle className="w-3 h-3 text-white" />
                 </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  {isLoadingPrices && <span className="flex items-center gap-1">🔄 <RefreshCw className="w-3 h-3 animate-spin" /></span>}
-                  {network === 'mainnet' ? 'Mainnet' : 'Devnet'}
-                </div>
+                <h3 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Swap
+                </h3>
               </div>
+              <button 
+                onClick={() => { setShowSwap(false); setSwapSig(''); setSwapError(''); }}
+                className="w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 hover:text-red-300 transition-all duration-200 flex items-center justify-center text-xs"
+              >
+                ✕
+              </button>
             </div>
             
             {/* Network Warning */}
             {network !== 'mainnet' && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-yellow-800">
-                  <Info className="w-4 h-4" />
-                  <span className="text-sm font-medium">Swap only available on Mainnet</span>
+              <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-xl p-4">
+                <div className="flex items-center gap-3 text-yellow-300">
+                  <div className="w-6 h-6 bg-yellow-500/30 rounded-full flex items-center justify-center">
+                    <Info className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold">Swap only available on Mainnet</div>
+                    <div className="text-xs text-yellow-400 mt-1">Please switch to Mainnet to use swap functionality.</div>
+                  </div>
                 </div>
-                <p className="text-xs text-yellow-600 mt-1">Please switch to Mainnet to use swap functionality.</p>
               </div>
             )}
-            
-            {/* Jupiter API Status Indicator */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-blue-800">
-                  <span className="text-sm font-medium">Jupiter API Status:</span>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    availableTokens.length > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {availableTokens.length > 0 ? 'Connected' : 'Disconnected'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setIsLoadingPrices(true);
-                      fetchPricesWithRetry();
-                    }}
-                    disabled={isLoadingPrices || network !== 'mainnet'}
-                    className="p-1 rounded hover:bg-blue-100 disabled:opacity-50"
-                    title="Refresh Jupiter prices"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoadingPrices ? 'animate-spin' : ''}`} />
-                  </button>
-                  <button
-                    onClick={async () => {
-                      console.log('🔍 Running Jupiter API diagnostic...');
-                      try {
-                        // Test token list
-                        const tokenResponse = await new Promise((resolve) => {
-                          if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                            chrome.runtime.sendMessage({ type: 'GET_TOKENS' }, (response) => {
-                              resolve(response || { ok: false, error: 'No response' });
-                            });
-                          } else {
-                            resolve({ ok: false, error: 'Chrome extension API not available' });
-                          }
-                        });
-                        
-                        console.log('🔍 Token list response:', tokenResponse);
-                        
-                        // Test price fetch
-                        const priceResponse = await new Promise((resolve) => {
-                          if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                            chrome.runtime.sendMessage({
-                              type: 'GET_PRICE_FOR_MINTS',
-                              payload: { mints: ['So11111111111111111111111111111111111111112'] }
-                            }, (response) => {
-                              resolve(response || { ok: false, error: 'No response' });
-                            });
-                          } else {
-                            resolve({ ok: false, error: 'Chrome extension API not available' });
-                          }
-                        });
-                        
-                        console.log('🔍 Price fetch response:', priceResponse);
-                        
-                        // Show results in UI
-                        const diagnosticInfo = `
-Jupiter API Diagnostic Results:
-
-Token List:
-- Status: ${tokenResponse.ok ? '✅ OK' : '❌ Failed'}
-- Response: ${JSON.stringify(tokenResponse, null, 2)}
-
-Price Fetch:
-- Status: ${priceResponse.ok ? '✅ OK' : '❌ Failed'}
-- Response: ${JSON.stringify(priceResponse, null, 2)}
-
-Check console for detailed logs.
-                        `;
-                        
-                        alert(diagnosticInfo);
-                        
-                      } catch (error) {
-                        console.error('🔍 Diagnostic failed:', error);
-                        alert(`Diagnostic failed: ${error.message}`);
-                      }
-                    }}
-                    className="p-1 rounded hover:bg-blue-100"
-                    title="Run Jupiter API diagnostic"
-                  >
-                    🔍
-                  </button>
-                  <div className="text-xs text-blue-600">
-                    {isLoadingPrices ? '🔄 Loading...' : '✅ Ready'}
-                  </div>
-                </div>
-              </div>
-              {availableTokens.length === 0 && (
-                <p className="text-xs text-blue-600 mt-1">
-                  No tokens loaded. Click the refresh button above to load tokens from Jupiter.
-                </p>
-              )}
-              {/* Jupiter Price Status */}
-              {network === 'mainnet' && (
-                <div className="mt-2 text-xs text-blue-600">
-                  <div className="flex items-center gap-2">
-                    <span>Real-time Prices:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      Object.keys(tokenPrices).length > 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {Object.keys(tokenPrices).length > 0 ? `${Object.keys(tokenPrices).length} tokens priced` : 'No prices loaded'}
-                    </span>
-                    {Object.keys(tokenPrices).length > 0 && (
-                      <span className="text-gray-500">
-                        Last updated: {new Date(Math.max(...Object.values(tokenPrices).map(p => p.lastUpdated))).toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    Powered by Jupiter Aggregator API via Background Service Worker
-                  </div>
-                </div>
-              )}
-            </div>
             
 
             
             <div className="space-y-4">
               {/* You Pay */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm text-gray-600">You Pay</div>
-                  <div className="text-xs text-gray-500">
-                    Balance: {formatBalance(getInputTokenUiBalance())} {findToken(swapInputMint)?.symbol}
+              <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl p-4 border border-purple-500/30 shadow-lg shadow-purple-500/10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-base font-semibold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    You Pay
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {formatBalance(getInputTokenUiBalance())} {findToken(swapInputMint)?.symbol}
+                    {tokenPrices[swapInputMint]?.price && (
+                      <div className="text-xs text-purple-300">
+                        ≈ ${(getInputTokenUiBalance() * tokenPrices[swapInputMint].price).toFixed(2)}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mb-2">
+                
+                <div className="flex items-center gap-2 mb-3">
                   <input 
                     value={swapAmount} 
                     onChange={(e) => setSwapAmount(e.target.value)} 
-                    className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
-                    placeholder="0" 
+                    className="flex-1 px-3 py-2 bg-gray-800/50 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200 text-sm" 
+                    placeholder="0.0" 
                   />
                   <div className="relative">
                     <button 
                       type="button" 
                       onClick={() => setShowInputTokenDropdown(!showInputTokenDropdown)} 
-                      className="w-44 px-3 py-2 border rounded-lg flex items-center justify-between bg-white"
+                      className="w-32 px-3 py-2 border border-purple-500/30 rounded-lg flex items-center justify-between bg-gray-800/50 hover:bg-gray-700/50 transition-all duration-200"
                     >
-                      <div className="flex items-center gap-2">
-                        {findToken(swapInputMint)?.logoURI ? (
-                          <img src={findToken(swapInputMint)?.logoURI} alt={findToken(swapInputMint)?.symbol} className="w-5 h-5 rounded-full" />
-                        ) : (
-                          <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
-                        )}
-                        <span className="truncate">{findToken(swapInputMint)?.symbol || 'Token'}</span>
-                      </div>
-                      <ChevronDown className="w-4 h-4" />
+                                              <div className="flex items-center gap-2">
+                          {findToken(swapInputMint)?.logoURI ? (
+                            <img src={findToken(swapInputMint)?.logoURI} alt={findToken(swapInputMint)?.symbol} className="w-5 h-5 rounded-full" />
+                          ) : (
+                            <div className="w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                          )}
+                          <span className="truncate text-white font-medium text-sm">{findToken(swapInputMint)?.symbol || 'Token'}</span>
+                        </div>
+                        <ChevronDown className="w-3 h-3 text-purple-400" />
                     </button>
                     {showInputTokenDropdown && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
-                        <div className="p-3 border-b border-gray-200">
+                      <div className="absolute z-50 w-full mt-2 bg-gray-900 border border-purple-500/30 rounded-xl shadow-2xl shadow-purple-500/20 max-h-60 overflow-hidden">
+                        <div className="p-3 border-b border-purple-500/20">
                           <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 text-purple-400" />
                             <input
                               type="text"
-                              placeholder="Search by name, symbol, or contract address..."
+                              placeholder="Search tokens..."
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
-                              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full pl-8 pr-3 py-2 bg-gray-800 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-sm"
                             />
-                          </div>
-                          <div className="text-xs text-gray-400 mt-1 px-1">
-                            💡 Search by token name, symbol, or paste a contract address
                           </div>
                         </div>
                         <div className="max-h-48 overflow-y-auto">
                           {isLoadingTokens ? (
-                            <div className="p-4 text-center text-gray-500">
+                            <div className="p-4 text-center text-gray-400">
                               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500 mx-auto mb-2"></div>
-                              <div className="text-xs">Fetching latest tokens...</div>
+                              <div className="text-xs">Loading tokens...</div>
                             </div>
                           ) : filteredTokens.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500">No tokens found</div>
+                            <div className="p-4 text-center text-gray-400">No tokens found</div>
                           ) : (
                             filteredTokens.map((token) => (
                               <button
@@ -1401,30 +1308,21 @@ Check console for detailed logs.
                                   setShowInputTokenDropdown(false);
                                   setSearchQuery('');
                                 }}
-                                className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                className="w-full flex items-center space-x-2 p-2 hover:bg-gray-800 border-b border-purple-500/20 last:border-b-0 transition-colors duration-200"
                               >
                                 {token.logoURI ? (
-                                  <img src={token.logoURI} alt={token.symbol} className="w-6 h-6 rounded-full" />
+                                  <img src={token.logoURI} alt={token.symbol} className="w-5 h-5 rounded-full" />
                                 ) : (
-                                  <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
+                                  <div className="w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
                                 )}
                                 <div className="flex-1 text-left">
-                                  <div className="flex items-center gap-2">
-                                    <div className="font-medium">{token.symbol}</div>
+                                  <div className="flex items-center gap-1">
+                                    <div className="font-medium text-white text-sm">{token.symbol}</div>
                                     {token.verified && (
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">✓</span>
-                                    )}
-                                    {token.tags?.includes('memecoin') && (
-                                      <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">🚀</span>
+                                      <span className="text-xs bg-blue-500/20 text-blue-400 px-1 py-0.5 rounded-full border border-blue-500/30">✓</span>
                                     )}
                                   </div>
-                                  <div className="text-sm text-gray-500">{token.name}</div>
-                                  <div className="text-xs text-gray-400 font-mono">
-                                    {token.mint.slice(0, 6)}...{token.mint.slice(-4)}
-                                  </div>
-                                  {token.price && (
-                                    <div className="text-xs text-green-600">${token.price.toFixed(6)}</div>
-                                  )}
+                                  <div className="text-xs text-gray-400">{token.name}</div>
                                 </div>
                               </button>
                             ))
@@ -1435,199 +1333,104 @@ Check console for detailed logs.
                   </div>
                 </div>
                 
-                {/* Token Price Info */}
-                {tokenPrices[swapInputMint] && (
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                    <span>Jupiter Price: ${tokenPrices[swapInputMint].price.toFixed(6)}</span>
-                    <div className="flex items-center gap-1">
-                      {tokenPrices[swapInputMint].priceChange24h > 0 ? (
-                        <TrendingUp className="w-3 h-3 text-green-500" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3 text-red-500" />
-                      )}
-                      <span className={tokenPrices[swapInputMint].priceChange24h > 0 ? 'text-green-500' : 'text-red-500'}>
-                        {Math.abs(tokenPrices[swapInputMint].priceChange24h).toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Real-time Input Feedback */}
-                {swapAmount && parseFloat(swapAmount) > 0 && (
-                  <div className="mb-2 p-2 bg-white rounded-lg border">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Input Value:</span>
-                      <span className="font-medium text-gray-800">
-                        {parseFloat(swapAmount).toFixed(6)} {findToken(swapInputMint)?.symbol}
-                      </span>
-                    </div>
-                    {tokenPrices[swapInputMint]?.price && (
-                      <div className="flex items-center justify-between text-xs mt-1">
-                        <span className="text-gray-600">USD Value:</span>
-                        <span className="font-medium text-green-600">
-                          ${(parseFloat(swapAmount) * tokenPrices[swapInputMint].price).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                    {swapPreview ? (
-                      <div className="flex items-center justify-between text-xs mt-1">
-                        <span className="text-gray-600">Jupiter Conversion:</span>
-                        <span className="text-green-600 font-medium">✓ Live</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between text-xs mt-1">
-                        <span className="text-gray-600">Status:</span>
-                        <span className="text-yellow-600 font-medium">
-                          {isLoadingPrices ? '🔄 Fetching Jupiter prices...' : '⏳ Waiting for Jupiter prices...'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span>Balance: {formatBalance(getInputTokenUiBalance())}</span>
-                  <button onClick={() => setPercent(0.25)} className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300">25%</button>
-                  <button onClick={() => setPercent(0.5)} className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300">50%</button>
-                  <button onClick={() => setPercent(0.75)} className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300">75%</button>
-                  <button onClick={() => setPercent(1)} className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300">Max</button>
-                </div>
+
               </div>
               
-              {/* Center icon with switch button */}
-              <div className="w-full flex justify-center flex-col items-center gap-2">
-                {/* Token pair display */}
-                <div className="text-xs text-gray-500 text-center">
-                  <div className="flex items-center gap-1 justify-center">
-                    <span className="font-medium">{findToken(swapInputMint)?.symbol || 'Token'}</span>
-                    <span>→</span>
-                    <span className="font-medium">{findToken(swapOutputMint)?.symbol || 'Token'}</span>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col items-center gap-1 group">
+              {/* Center Switch Button & Live Rate */}
+              <div className="w-full flex flex-col items-center gap-2">
                 <button
                   onClick={switchTokens}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      if (!isSwitchingTokens) switchTokens();
-                    }
-                  }}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                    isSwitchingTokens 
-                      ? 'bg-purple-300 text-purple-600 cursor-not-allowed' 
-                      : 'bg-purple-200 text-purple-700 hover:bg-purple-300 hover:scale-110 active:scale-95'
-                  }`}
-                  title={swapPreview ? `Current rate: 1 ${findToken(swapInputMint)?.symbol} = ${swapPreview.exchangeRate.toFixed(6)} ${findToken(swapOutputMint)?.symbol}` : "Switch tokens"}
                   disabled={isSwitchingTokens}
-                  aria-label="Switch input and output tokens"
-                  aria-describedby="switch-tokens-description"
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
+                    isSwitchingTokens 
+                      ? 'bg-purple-500/30 text-purple-400 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:scale-110 active:scale-95 hover:shadow-purple-500/50'
+                  }`}
+                  title="Switch tokens"
                 >
                   {isSwitchingTokens ? (
-                    <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   ) : (
                     <Shuffle className="w-4 h-4" />
                   )}
                 </button>
-                <span className={`text-xs font-medium ${isSwitchingTokens ? 'text-purple-500' : 'text-gray-500'}`}>
-                  {isSwitchingTokens ? 'Switching...' : 'Switch'}
-                </span>
                 
-                {/* Hidden description for screen readers */}
-                <span id="switch-tokens-description" className="sr-only">
-                  Click to swap the input and output tokens in this swap
-                </span>
-                
-                {/* Success message */}
-                {showSwitchSuccess && (
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full bg-green-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap animate-pulse">
-                    Tokens switched!
-                  </div>
-                )}
-                
-                {/* Exchange rate tooltip */}
-                {swapPreview && (
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full bg-blue-600 text-white text-xs px-3 py-2 rounded-lg whitespace-nowrap shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                    <div className="text-center">
-                      <div className="font-medium">Current Rate</div>
-                      <div className="text-xs opacity-90">
-                        1 {findToken(swapInputMint)?.symbol} = {swapPreview.exchangeRate.toFixed(6)} {findToken(swapOutputMint)?.symbol}
-                      </div>
+                {/* Live Price Rate Display */}
+                {swapAmount && parseFloat(swapAmount) > 0 && swapPreview && tokenPrices[swapInputMint] && tokenPrices[swapOutputMint] && (
+                  <div className="text-center bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg p-2 border border-purple-500/20">
+                    <div className="text-xs text-gray-400 mb-1">Live Rate</div>
+                    <div className="text-sm font-bold text-white">
+                      1 {findToken(swapInputMint)?.symbol} = {swapPreview.exchangeRate.toFixed(6)} {findToken(swapOutputMint)?.symbol}
                     </div>
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-600"></div>
+                    <div className="text-xs text-gray-400">
+                      ${tokenPrices[swapInputMint].price.toFixed(2)} → ${tokenPrices[swapOutputMint].price.toFixed(2)}
+                    </div>
                   </div>
                 )}
-                </div>
               </div>
               
               {/* You Receive */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="text-sm text-gray-600 mb-2">You Receive</div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 px-3 py-2 bg-white border rounded-lg">
+              <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl p-4 border border-purple-500/30 shadow-lg shadow-purple-500/10">
+                <div className="text-base font-semibold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-3">
+                  You Receive
+                </div>
+                
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex-1 px-3 py-2 bg-gray-800/50 border border-green-500/30 rounded-lg">
                     {swapAmount && parseFloat(swapAmount) > 0 ? (
                       swapPreview ? (
-                        <div className="space-y-1">
-                          <div className="text-lg font-medium text-green-600">
-                            {swapPreview.outputValue.toFixed(6)}
-                          </div>
-                          {tokenPrices[swapInputMint]?.price && tokenPrices[swapOutputMint]?.price && (
-                            <div className="text-xs text-gray-500">
-                              ≈ ${(swapPreview.outputValue * tokenPrices[swapOutputMint].price).toFixed(2)}
-                            </div>
-                          )}
+                        <div className="text-lg font-bold text-green-400">
+                          {swapPreview.outputValue.toFixed(6)}
                         </div>
                       ) : (
                         <div className="text-gray-400 text-sm">
-                          {isLoadingPrices ? 'Loading prices...' : 'Calculating...'}
+                          {isLoadingPrices ? 'Calculating...' : 'Enter amount'}
                         </div>
                       )
                     ) : (
-                      <div className="text-gray-400">0.00</div>
+                      <div className="text-gray-400 text-sm">0.00</div>
                     )}
                   </div>
+                  
                   <div className="relative flex-1">
                     <button 
                       type="button" 
                       onClick={() => setShowOutputTokenDropdown(!showOutputTokenDropdown)} 
-                      className="w-full px-3 py-2 border rounded-lg flex items-center justify-between bg-white"
+                      className="w-full px-3 py-2 border border-green-500/30 rounded-lg flex items-center justify-between bg-gray-800/50 hover:bg-gray-700/50 transition-all duration-200"
                     >
                       <div className="flex items-center gap-2">
                         {findToken(swapOutputMint)?.logoURI ? (
                           <img src={findToken(swapOutputMint)?.logoURI} alt={findToken(swapOutputMint)?.symbol} className="w-5 h-5 rounded-full" />
                         ) : (
-                          <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
+                          <div className="w-5 h-5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
                         )}
-                        <span className="truncate">{findToken(swapOutputMint)?.symbol || 'Token'}</span>
+                        <span className="truncate text-white font-medium text-sm">{findToken(swapOutputMint)?.symbol || 'Token'}</span>
                       </div>
-                      <ChevronDown className="w-4 h-4" />
+                      <ChevronDown className="w-3 h-3 text-green-400" />
                     </button>
+                    
                     {showOutputTokenDropdown && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
-                        <div className="p-3 border-b border-gray-200">
+                      <div className="absolute z-50 w-full mt-2 bg-gray-900 border border-green-500/30 rounded-xl shadow-2xl shadow-green-500/20 max-h-60 overflow-hidden">
+                        <div className="p-3 border-b border-green-500/20">
                           <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 text-green-400" />
                             <input
                               type="text"
-                              placeholder="Search by name, symbol, or contract address..."
+                              placeholder="Search tokens..."
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
-                              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full pl-8 pr-3 py-2 bg-gray-800 border border-green-500/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 text-sm"
                             />
-                          </div>
-                          <div className="text-xs text-gray-400 mt-1 px-1">
-                            💡 Search by token name, symbol, or paste a contract address
                           </div>
                         </div>
                         <div className="max-h-48 overflow-y-auto">
                           {isLoadingTokens ? (
-                            <div className="p-4 text-center text-gray-500">
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500 mx-auto mb-2"></div>
-                              <div className="text-xs">Fetching latest tokens...</div>
+                            <div className="p-4 text-center text-gray-400">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500 mx-auto mb-2"></div>
+                              <div className="text-xs">Loading tokens...</div>
                             </div>
                           ) : filteredTokens.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500">No tokens found</div>
+                            <div className="p-4 text-center text-gray-400">No tokens found</div>
                           ) : (
                             filteredTokens.map((token) => (
                               <button
@@ -1636,30 +1439,21 @@ Check console for detailed logs.
                                   setSwapOutputMint(token.mint);
                                   setShowOutputTokenDropdown(false);
                                 }}
-                                className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                className="w-full flex items-center space-x-2 p-2 hover:bg-gray-800 border-b border-green-500/20 last:border-b-0 transition-colors duration-200"
                               >
                                 {token.logoURI ? (
-                                  <img src={token.logoURI} alt={token.symbol} className="w-6 h-6 rounded-full" />
+                                  <img src={token.logoURI} alt={token.symbol} className="w-5 h-5 rounded-full" />
                                 ) : (
-                                  <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
+                                  <div className="w-5 h-5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
                                 )}
                                 <div className="flex-1 text-left">
-                                  <div className="flex items-center gap-2">
-                                    <div className="font-medium">{token.symbol}</div>
+                                  <div className="flex items-center gap-1">
+                                    <div className="font-medium text-white text-sm">{token.symbol}</div>
                                     {token.verified && (
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">✓</span>
-                                    )}
-                                    {token.tags?.includes('memecoin') && (
-                                      <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">🚀</span>
+                                      <span className="text-xs bg-blue-500/20 text-blue-400 px-1 py-0.5 rounded-full border border-blue-500/30">✓</span>
                                     )}
                                   </div>
-                                  <div className="text-sm text-gray-500">{token.name}</div>
-                                  <div className="text-xs text-gray-400 font-mono">
-                                    {token.mint.slice(0, 6)}...{token.mint.slice(-4)}
-                                  </div>
-                                  {token.price && (
-                                    <div className="text-xs text-green-600">${token.price.toFixed(6)}</div>
-                                  )}
+                                  <div className="text-xs text-gray-400">{token.name}</div>
                                 </div>
                               </button>
                             ))
@@ -1670,153 +1464,47 @@ Check console for detailed logs.
                   </div>
                 </div>
                 
-                {/* Real-time Conversion Status */}
-                {swapAmount && parseFloat(swapAmount) > 0 && (
-                  <div className="mt-3 p-2 bg-white rounded-lg border">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Jupiter Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        swapPreview ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {swapPreview ? 'Live' : 'Calculating...'}
-                      </span>
-                    </div>
-                    {swapPreview && (
-                      <div className="mt-2 text-xs text-gray-600">
-                        <div className="flex justify-between">
-                          <span>Rate:</span>
-                          <span className="font-medium">
-                            1 {findToken(swapInputMint)?.symbol} = {swapPreview.exchangeRate.toFixed(6)} {findToken(swapOutputMint)?.symbol}
-                          </span>
-                        </div>
-                        {tokenPrices[swapInputMint]?.price && tokenPrices[swapOutputMint]?.price && (
-                          <div className="flex justify-between mt-1">
-                            <span>Value:</span>
-                            <span className="font-medium">
-                              ${(parseFloat(swapAmount) * tokenPrices[swapInputMint].price).toFixed(2)} → ${(swapPreview.outputValue * tokenPrices[swapOutputMint].price).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+
               </div>
               
-              {/* Exchange Rate Display */}
-              {swapPreview && (
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-3">
-                  <div className="text-center">
-                    <div className="text-sm text-gray-600 mb-1">Jupiter Exchange Rate</div>
-                    <div className="text-lg font-bold text-blue-800">
-                      1 {findToken(swapInputMint)?.symbol} = {swapPreview.exchangeRate.toFixed(6)} {findToken(swapOutputMint)?.symbol}
-                    </div>
-                    {/* Real-time conversion amount */}
-                    {swapAmount && parseFloat(swapAmount) > 0 && (
-                      <div className="text-sm text-blue-600 mt-2">
-                        {parseFloat(swapAmount).toFixed(6)} {findToken(swapInputMint)?.symbol} = {swapPreview.outputValue.toFixed(6)} {findToken(swapOutputMint)?.symbol}
-                      </div>
-                    )}
-                    <div className="text-xs text-blue-500 mt-2">
-                      Powered by Jupiter Aggregator - Real-time prices from all major DEXs
-                    </div>
+              {/* Slippage Setting */}
+              <div className="bg-gradient-to-br from-gray-800/30 to-gray-900/30 rounded-lg p-3 border border-purple-500/20">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-300">Slippage Tolerance</span>
+                  <div className="flex gap-1">
+                    {[0.5, 1, 2].map((percent) => (
+                      <button
+                        key={percent}
+                        onClick={() => setSlippageBps(percent * 100)}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                          slippageBps === percent * 100
+                            ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
+                            : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50'
+                        }`}
+                      >
+                        {percent}%
+                      </button>
+                    ))}
                   </div>
-                </div>
-              )}
-              
-              {/* Real-time Conversion Preview */}
-              {swapAmount && parseFloat(swapAmount) > 0 && swapPreview && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="text-sm font-medium text-green-800 mb-2">Jupiter Conversion Preview</div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">You Pay:</span>
-                      <span className="font-medium text-gray-800">
-                        {parseFloat(swapAmount).toFixed(6)} {findToken(swapInputMint)?.symbol}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">You Receive:</span>
-                      <span className="font-medium text-green-600">
-                        {swapPreview.outputValue.toFixed(6)} {findToken(swapOutputMint)?.symbol}
-                      </span>
-                    </div>
-                    {tokenPrices[swapInputMint]?.price && tokenPrices[swapOutputMint]?.price && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">USD Value:</span>
-                        <span className="font-medium text-gray-800">
-                          ${(parseFloat(swapAmount) * tokenPrices[swapInputMint].price).toFixed(2)} → ${(swapPreview.outputValue * tokenPrices[swapOutputMint].price).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Swap Preview */}
-              {swapPreview && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                  <div className="text-sm font-medium text-blue-800">Jupiter Swap Details</div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Price Impact:</span>
-                      <span className={swapPreview.priceImpact > 2 ? 'text-red-600' : 'text-green-600'}>
-                        {swapPreview.priceImpact.toFixed(2)}%
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Network Fee:</span>
-                      <span className="font-medium">~{swapPreview.fee.toFixed(6)} SOL</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Data Source:</span>
-                      <span className="font-medium text-blue-600">Jupiter API</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Slippage Settings */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="text-sm font-medium text-gray-700 mb-2">Slippage Tolerance</div>
-                <div className="flex gap-2">
-                  {[50, 100, 200, 500].map((bps) => (
-                    <button
-                      key={bps}
-                      onClick={() => setSlippageBps(bps)}
-                      className={`px-3 py-1 rounded text-xs font-medium ${
-                        slippageBps === bps
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      {(bps / 100).toFixed(1)}%
-                    </button>
-                  ))}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Higher slippage = higher success rate but worse prices
                 </div>
               </div>
-              
-              {/* Error and Success Messages */}
-              {swapError && <p className="text-sm text-red-500">{swapError}</p>}
-              {swapSig && (
-                <div className="text-xs text-green-600 break-all bg-green-50 p-2 rounded">
-                  Swapped successfully! 
-                  <a className="underline block mt-1" href={`${explorerBase}${swapSig}`} target="_blank" rel="noreferrer">
-                    View on Explorer
-                  </a>
-                </div>
-              )}
+
             </div>
             
+            {/* Swap Button */}
             <button 
               onClick={handleSwap} 
               disabled={loading || !onSwap || network !== 'mainnet' || !swapAmount || !swapPreview} 
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white py-3 px-4 rounded-xl font-bold text-base shadow-xl shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             >
-              {loading ? 'Swapping...' : 'Swap'}
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Swapping...</span>
+                </div>
+              ) : (
+                'Swap'
+              )}
             </button>
           </div>
         </div>
