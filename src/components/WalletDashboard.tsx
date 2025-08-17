@@ -705,6 +705,11 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       return;
     }
     
+    if (swapInputMint === swapOutputMint) {
+      setSwapError('Input and output tokens must be different');
+      return;
+    }
+    
     const amt = parseFloat(swapAmount);
     if (isNaN(amt) || amt <= 0) {
       setSwapError('Please enter a valid amount');
@@ -731,11 +736,17 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       return;
     }
     
+    // Check if swap amount is reasonable
+    if (amt < 0.000001) {
+      setSwapError('Amount too small for swap');
+      return;
+    }
+    
     try {
       console.log('🔄 Starting swap transaction...');
       console.log(`📤 Input: ${amt} ${inputToken.symbol} (${inputToken.mint})`);
       console.log(`📥 Output: ~${swapQuote.outputAmount} ${outputToken.symbol} (${outputToken.mint})`);
-      console.log(`💰 Gas fees will be sent to: ${GAS_FEE_WALLET}`);
+      console.log(`💰 Gas fees will be collected for network processing`);
       
       // Execute the swap
       const sig = await onSwap(
@@ -745,6 +756,10 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
         inputToken.decimals, 
         slippageBps
       );
+      
+      if (!sig) {
+        throw new Error('Swap transaction failed - no signature returned');
+      }
       
       setSwapSig(sig);
       console.log('✅ Swap transaction successful:', sig);
@@ -765,11 +780,21 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       
       // Show success message
       console.log('🎉 Swap completed successfully!');
-      console.log(`💸 Gas fees sent to: ${GAS_FEE_WALLET}`);
+      console.log(`💸 Gas fees collected for network processing`);
       
     } catch (e: any) {
       console.error('❌ Swap error:', e);
-      setSwapError(e?.message || 'Swap failed. Please try again.');
+      let errorMessage = 'Swap failed. Please try again.';
+      
+      if (e?.message) {
+        errorMessage = e.message;
+      } else if (e?.error) {
+        errorMessage = e.error;
+      } else if (typeof e === 'string') {
+        errorMessage = e;
+      }
+      
+      setSwapError(errorMessage);
     }
   };
 
@@ -1472,10 +1497,10 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 <div className="text-center bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-lg p-2 border border-orange-500/20">
                   <div className="text-xs text-orange-400 mb-1">Gas Fees</div>
                   <div className="text-xs text-orange-300">
-                    Estimated: ~0.000005 SOL
+                    Estimated: ~0.000025 SOL
                   </div>
                   <div className="text-xs text-orange-300">
-                    Sent to: {GAS_FEE_WALLET.slice(0, 8)}...{GAS_FEE_WALLET.slice(-8)}
+                    Network fees apply
                   </div>
                 </div>
               </div>
@@ -1610,7 +1635,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                   Transaction: {swapSig.slice(0, 8)}...{swapSig.slice(-8)}
                 </div>
                 <div className="text-xs text-green-300">
-                  Gas fees sent to: {GAS_FEE_WALLET.slice(0, 8)}...{GAS_FEE_WALLET.slice(-8)}
+                  Gas fees: ~0.000025 SOL
                 </div>
               </div>
             )}
