@@ -748,7 +748,33 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       console.log(`📥 Output: ~${swapQuote.outputAmount} ${outputToken.symbol} (${outputToken.mint})`);
       console.log(`💰 Gas fees will be collected for network processing`);
       
-      // Execute the swap
+      // For testing purposes, if we're on devnet, simulate a successful swap
+      if (network === 'devnet') {
+        console.log('🧪 Devnet detected - simulating swap...');
+        const mockSignature = 'mock_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        
+        // Simulate delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setSwapSig(mockSignature);
+        console.log('✅ Mock swap transaction successful:', mockSignature);
+        
+        // Add the received token to user's token list if not already present
+        const existingToken = tokenBalances.find(t => t.mint === swapOutputMint);
+        if (!existingToken) {
+          console.log(`🆕 Adding ${outputToken.symbol} to user's token list`);
+        }
+        
+        // Reset form after successful swap
+        setSwapAmount('');
+        setSwapQuote(null);
+        setSwapPreview(null);
+        
+        console.log('🎉 Mock swap completed successfully!');
+        return;
+      }
+      
+      // Execute the real swap on mainnet
       const sig = await onSwap(
         swapInputMint.trim(), 
         swapOutputMint.trim(), 
@@ -768,9 +794,6 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       const existingToken = tokenBalances.find(t => t.mint === swapOutputMint);
       if (!existingToken) {
         console.log(`🆕 Adding ${outputToken.symbol} to user's token list`);
-        // Note: In a real implementation, this would update the wallet state
-        // For now, we'll just log it. The actual token balance would be updated
-        // when the wallet refreshes after the transaction confirmation
       }
       
       // Reset form after successful swap
@@ -778,7 +801,6 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
       setSwapQuote(null);
       setSwapPreview(null);
       
-      // Show success message
       console.log('🎉 Swap completed successfully!');
       console.log(`💸 Gas fees collected for network processing`);
       
@@ -1496,12 +1518,20 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                 {/* Gas Fee Display */}
                 <div className="text-center bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-lg p-2 border border-orange-500/20">
                   <div className="text-xs text-orange-400 mb-1">Gas Fees</div>
-                  <div className="text-xs text-orange-300">
-                    Estimated: ~0.000025 SOL
-                  </div>
-                  <div className="text-xs text-orange-300">
-                    Network fees apply
-                  </div>
+                  {network === 'devnet' ? (
+                    <div className="text-xs text-orange-300">
+                      Test Mode - No real fees
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-xs text-orange-300">
+                        Estimated: ~0.000025 SOL
+                      </div>
+                      <div className="text-xs text-orange-300">
+                        Network fees apply
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               
@@ -1650,7 +1680,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
             {/* Swap Button */}
             <button 
               onClick={handleSwap} 
-              disabled={loading || !onSwap || network !== 'mainnet' || !swapAmount || !swapPreview} 
+              disabled={loading || !onSwap || !swapAmount || !swapPreview} 
               className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white py-3 px-4 rounded-xl font-bold text-base shadow-xl shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             >
               {loading ? (
@@ -1659,7 +1689,7 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({
                   <span>Swapping...</span>
                 </div>
               ) : (
-                'Swap'
+                network === 'devnet' ? 'Test Swap (Devnet)' : 'Swap'
               )}
             </button>
           </div>
